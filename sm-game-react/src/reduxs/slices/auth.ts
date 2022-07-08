@@ -7,7 +7,7 @@ const initState: User = {
   wallet: "",
 };
 
-const authSlice = createSlice({
+const smSlide = createSlice({
   name: "authenticate",
   initialState: initState,
   reducers: {
@@ -18,8 +18,8 @@ const authSlice = createSlice({
   },
 });
 
-const authReducer = authSlice.reducer;
+const authReducer = smSlide.reducer;
 
-export const { login } = authSlice.actions;
+export const { login } = smSlide.actions;
 
 export default authReducer;
