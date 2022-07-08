@@ -14,55 +14,76 @@ contract Lottery is VRFConsumerBaseV2 {
     uint16 requestConfirmations = 3;
     address s_owner;
 
-    uint32 range = 5;
-    mapping(uint256 => Ticket[]) private s_ticket;
-    mapping(uint256 => uint256) private s_win;
-    uint256 current_innings = 1;
+    mapping(uint256 => Player[]) public s_players;
+    mapping(uint256 => Player) public s_winner;
+    uint256 current_innings;
+    uint256 public rolling_innings;
 
-    struct Ticket{
+    uint256 public result;
+    bool public isRolling = false;
+
+    struct Player{
         string buyerId;
         address buyerWallet;
-        uint luckyNumber;
     }
 
     constructor(uint64 subscriptionId) VRFConsumerBaseV2(vrfCoordinator) {
         COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
         s_owner = msg.sender;
         s_subscriptionId = subscriptionId;
+        current_innings = 1;
     }
 
     event rollSuccess();
-    event buyTicketSuccess(string _id, address buyer);
+    event registerGameSuccess(string _id, address buyer);
 
-    function setInnings(uint256 innings) public onlyOwner{
+    function startInning(uint256 innings) public onlyOwner{
         current_innings = innings;
     }
 
-    function buyTicket(string memory _id, uint number, uint256 innings) public {
+    function getWin(uint256 innings) public returns (Player memory win){
+        return s_winner[innings];
+    }
+
+    function registerGame(string memory _id, uint256 innings) public {
         if(innings == current_innings){
-            Ticket memory ticket = Ticket(_id, msg.sender, number);
-            s_ticket[innings].push(ticket);
-            emit buyTicketSuccess(_id, msg.sender);
+            Player memory player = Player(_id, msg.sender);
+            s_players[innings].push(player);
+            emit registerGameSuccess(_id, msg.sender);
         }
     }
 
     function roll() public onlyOwner returns (uint256 requestId){
-        return COORDINATOR.requestRandomWords(
-            s_keyHash,
-            s_subscriptionId,
-            requestConfirmations,
-            callbackGasLimit,
-            1
-        );
+        if(current_innings !=0 ){
+            setRolling(current_innings);
+            current_innings = 0;
+            isRolling = true;
+            return COORDINATOR.requestRandomWords(
+                s_keyHash,
+                s_subscriptionId,
+                requestConfirmations,
+                callbackGasLimit,
+                1
+            );
+        }
+    }
+    function setRolling(uint256 innings) public{
+        rolling_innings = innings;
     }
 
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomness) internal override {
-        s_win[current_innings] = randomness[0]%range;
+        result = randomness[0];
+        emit rollSuccess();
     }
 
     function giveRewards() public{
 
     }
+
+    function setWin() public onlyOwner{
+        s_winner[rolling_innings] = (s_players[rolling_innings])[result%(s_players[rolling_innings].length)];
+    }
+
 
     modifier onlyOwner() {
         require(msg.sender == s_owner);
