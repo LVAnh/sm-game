@@ -39,14 +39,13 @@ import Home from '../components/home';
 import GaneSetting from '../components/setting';
 import SmartContractService from "../services/smart-contract-services";
 import {OWNER} from "../constants";
-import { RootState } from '../reduxs/store';
-import { useSelector } from 'react-redux';
+import {RootState} from '../reduxs/store';
+import {useSelector} from 'react-redux';
 
 interface LinkItemProps {
     name: string;
     icon: IconType;
 }
-
 
 
 export default function Game() {
@@ -56,17 +55,22 @@ export default function Game() {
         {name: 'Home', icon: FiHome},
         {name: 'Player', icon: FiTrendingUp},
     ]);
-    const wallet  = useSelector((state: RootState)=>state.wallet);
+    const wallet = useSelector((state: RootState) => state.wallet);
 
-    useEffect(()=>{
-        if(wallet.address===OWNER){
-            setLinkItems ([
+    useEffect(() => {
+        if (wallet.address===OWNER) {
+            setLinkItems([
                 {name: 'Home', icon: FiHome},
                 {name: 'Player', icon: FiTrendingUp},
                 {name: 'Setting Game', icon: FiSettings},
             ]);
+        } else {
+            setLinkItems([
+                {name: 'Home', icon: FiHome},
+                {name: 'Player', icon: FiTrendingUp},
+            ]);
         }
-    },[])
+    }, [wallet])
 
     return (
         <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.900')}>
@@ -75,7 +79,7 @@ export default function Game() {
                 onSelect={(name) => {
                     setSelected(name)
                 }}
-                LinkItems = {LinkItems}
+                LinkItems={LinkItems}
                 display={{base: 'none', md: 'block'}}
             />
             <Drawer
@@ -91,7 +95,7 @@ export default function Game() {
                                     onSelect={(name) => {
                                         setSelected(name)
                                     }}
-                                    LinkItems = {LinkItems}
+                                    LinkItems={LinkItems}
                     />
                 </DrawerContent>
             </Drawer>
@@ -110,7 +114,6 @@ export default function Game() {
 }
 
 
-
 interface SidebarProps {
     LinkItems: Array<LinkItemProps>;
     onClose: () => void;
@@ -118,7 +121,7 @@ interface SidebarProps {
     display?: Token<CSS.Property.Display>;
 }
 
-const SidebarContent = ({LinkItems,onClose, onSelect, display}: SidebarProps) => {
+const SidebarContent = ({LinkItems, onClose, onSelect, display}: SidebarProps) => {
     const [selected, setSelected] = useState('Home');
 
     return (
@@ -198,7 +201,7 @@ interface MobileProps extends FlexProps {
 }
 
 const MobileNav = ({onOpen, ...rest}: MobileProps) => {
-    const wallet  = useSelector((state: RootState)=>state.wallet);
+    const wallet = useSelector((state: RootState) => state.wallet);
 
     return (
         <Flex
@@ -247,19 +250,8 @@ const MobileNav = ({onOpen, ...rest}: MobileProps) => {
                                         {wallet.address}
                                     </Text>
                                 </VStack>
-                                <Box display={{base: 'none', md: 'flex'}}>
-                                    <FiChevronDown/>
-                                </Box>
                             </HStack>
                         </MenuButton>
-                        <MenuList
-                            bg={useColorModeValue('white', 'gray.900')}
-                            borderColor={useColorModeValue('gray.200', 'gray.700')}>
-                            <MenuItem>Profile</MenuItem>
-                            <MenuItem>Settings</MenuItem>
-                            <MenuDivider/>
-                            <MenuItem>Sign out</MenuItem>
-                        </MenuList>
                     </Menu>
                 </Flex>
             </HStack>

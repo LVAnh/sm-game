@@ -14,50 +14,65 @@ contract Lottery is VRFConsumerBaseV2 {
     uint16 requestConfirmations = 3;
     address s_owner;
 
-    mapping(uint256 => Player[]) public s_players;
-    mapping(uint256 => Player) public s_winner;
+    mapping(uint256 => Player[]) s_players;
+    mapping(uint256 => Player) s_winner;
     uint256 current_innings;
     uint256 public rolling_innings;
 
     uint256 public result;
     bool public isRolling = false;
-
+    bool isOpen = false;
+    bool public isFinishRoll = false;
     struct Player{
-        string buyerId;
-        address buyerWallet;
+        string id;
+        address wallet;
+        string reward;
     }
+
 
     constructor(uint64 subscriptionId) VRFConsumerBaseV2(vrfCoordinator) {
         COORDINATOR = VRFCoordinatorV2Interface(vrfCoordinator);
         s_owner = msg.sender;
         s_subscriptionId = subscriptionId;
         current_innings = 1;
+        isOpen = true;
     }
 
     event rollSuccess();
     event registerGameSuccess(string _id, address buyer);
+    function getInning()public view returns(uint256){
+        return current_innings;
+    }
+    function getPlayers(uint256 innings) public view returns(Player[] memory) {
+        Player[] memory data = s_players[innings];
+        return data;
+    }
 
+    function getWinner(uint256 innings) public view returns(Player memory) {
+        return s_winner[innings];
+    }
     function startInning(uint256 innings) public onlyOwner{
         current_innings = innings;
     }
 
     function getWin(uint256 innings) public returns (Player memory win){
-        return s_winner[innings];
+        return s_winner[current_innings];
     }
 
-    function registerGame(string memory _id, uint256 innings) public {
-        if(innings == current_innings){
-            Player memory player = Player(_id, msg.sender);
-            s_players[innings].push(player);
+    function registerGame(string memory _id,string memory reward) public {
+        if(isOpen == true){
+            Player memory player = Player(_id, msg.sender, reward);
+            s_players[current_innings].push(player);
             emit registerGameSuccess(_id, msg.sender);
         }
     }
 
     function roll() public onlyOwner returns (uint256 requestId){
-        if(current_innings !=0 ){
+        if(current_innings > rolling_innings){
             setRolling(current_innings);
-            current_innings = 0;
             isRolling = true;
+            isFinishRoll = false;
+            isOpen = false;
             return COORDINATOR.requestRandomWords(
                 s_keyHash,
                 s_subscriptionId,
@@ -67,12 +82,21 @@ contract Lottery is VRFConsumerBaseV2 {
             );
         }
     }
-    function setRolling(uint256 innings) public{
+    function setRolling(uint256 innings) public onlyOwner{
         rolling_innings = innings;
+    }
+    function startGame() public onlyOwner returns (bool){
+        if(isOpen == false){
+            current_innings += 1;
+            isOpen = true;
+            return true;
+        }
+        return false;
     }
 
     function fulfillRandomWords(uint256 requestId, uint256[] memory randomness) internal override {
         result = randomness[0];
+        isFinishRoll = true;
         emit rollSuccess();
     }
 
@@ -81,6 +105,8 @@ contract Lottery is VRFConsumerBaseV2 {
     }
 
     function setWin() public onlyOwner{
+        isRolling = false;
+        isFinishRoll = false;
         s_winner[rolling_innings] = (s_players[rolling_innings])[result%(s_players[rolling_innings].length)];
     }
 

@@ -2,8 +2,9 @@ import {Contract, ethers} from "ethers";
 import {Store} from "redux";
 import {ABI, SM_ADDRESS} from "../constants";
 import {connect} from "../reduxs/slices/wallet";
-import {fetchPlayer} from "../reduxs/slices/game";
+import {fetchGame, fetchPlayer, setIsRolling, getInning} from "../reduxs/slices/game";
 import PlayerType from "../types/PlayerType";
+import GameType from "../types/GameType";
 
 declare global {
     interface Window {
@@ -26,6 +27,8 @@ export default class SmartContractService {
     static instance(store ?: Store): SmartContractService {
         if (!SmartContractService._instance) {
             SmartContractService._instance = new SmartContractService();
+        }
+        if (!!store) {
             SmartContractService._instance.setReduxStore(store)
         }
         return SmartContractService._instance;
@@ -38,14 +41,14 @@ export default class SmartContractService {
                 alert("Please install MetaMask!");
                 return;
             }
-            const accounts = await ethereum.request({
-                method: "eth_requestAccounts",
-            });
-            this.reduxStore?.dispatch(connect({
-                address: accounts[0]
-            }))
+
             this.provider = new ethers.providers.Web3Provider(ethereum);
+            const accounts = await this.provider.send("eth_requestAccounts", []);
             this.signer = this.provider.getSigner();
+            this.reduxStore?.dispatch(connect({
+                address: await this.signer.getAddress()
+            }))
+
             this.contract = new ethers.Contract(SM_ADDRESS, ABI, this.provider);
             return accounts[0] && this.provider && this.signer && this.contract
         } catch (error) {
@@ -55,9 +58,82 @@ export default class SmartContractService {
     }
 
 
-    async connectContract() {
+    async startNewGame() {
+        if (this.contract && this.signer) {
+            try {
+                const contractSigner = this.contract?.connect(this.signer);
+                await contractSigner.startGame();
+                alert("Start Game success");
+            } catch (e) {
+                alert("Start Game fail");
+            }
+        } else {
+            alert("Start Game fail");
+        }
+    };
+
+    checkRollSuccess() {
+        if (this.contract && this.signer) {
+            this.reduxStore?.dispatch(setIsRolling(1))
+
+            const contractSigner = this.contract?.connect(this.signer);
+
+            let seconds = 100;
+            let myInterval = setInterval(() => {
+                if (seconds > 0) {
+                    seconds--;
+                    contractSigner.isFinishRoll().then((res: boolean) => {
+                        if (res) {
+                            this.reduxStore?.dispatch(setIsRolling(2))
+                            alert("Roll success. Please Finish roll")
+                            clearInterval(myInterval)
+                        }
+                    })
+                }
+                if (seconds === 0) {
+                    clearInterval(myInterval)
+                }
+            }, 3000)
+        }
+    }
+
+    async getInning() {
         if (this.contract && this.signer) {
             const contractSigner = this.contract?.connect(this.signer);
+            const inningRes = await contractSigner.getInning();
+            const inning = Number(inningRes)
+            this.reduxStore?.dispatch(getInning(inning))
+        }
+    }
+
+
+    async roll() {
+        if (this.contract && this.signer) {
+            try {
+                const contractSigner = this.contract?.connect(this.signer);
+                await contractSigner.roll();
+                this.checkRollSuccess()
+                alert("Start roll!");
+            } catch (e) {
+                alert("Roll fail");
+            }
+        } else {
+            alert("Roll fail");
+        }
+    };
+
+    async finishRoll() {
+        if (this.contract && this.signer) {
+            try {
+                const contractSigner = this.contract?.connect(this.signer);
+                await contractSigner.setWin();
+                this.reduxStore?.dispatch(setIsRolling(0))
+                alert("Finish roll!");
+            } catch (e) {
+                alert("Roll fail");
+            }
+        } else {
+            alert("Roll fail");
         }
     };
 
@@ -70,30 +146,48 @@ export default class SmartContractService {
     async getAllPlayer() {
         if (this.contract && this.signer) {
             const contractSigner = this.contract?.connect(this.signer);
+            const inningRes = await contractSigner.getInning();
+            const inning = Number(inningRes)
             const result: PlayerType[] = [];
-            for (let i = 0; ; i++) {
-                try {
-                    const res = await contractSigner.s_players(2, i);
-                    result.push({
-                        buyerId: res[0],
-                        buyerWallet: res[1],
-                        rewardId: "1",
-                    })
-                } catch (e) {
-                    break
-                }
-            }
-            console.log(result)
-            this.reduxStore?.dispatch(fetchPlayer({
-                players: result.reverse()
-            }))
+            const res = await contractSigner.getPlayers(inning);
+            console.log(res)
+            res.forEach((player: string[]) => {
+                result.push({
+                    id: player[0],
+                    wallet: player[1],
+                    reward: player[2],
+                })
+            })
+            this.reduxStore?.dispatch(fetchPlayer(result.reverse()))
         }
     }
 
-    async registerGame(id: string, inning: number) {
+    async getAllGame() {
         if (this.contract && this.signer) {
             const contractSigner = this.contract?.connect(this.signer);
-            const res = await contractSigner.registerGame(id, inning);
+            const result: GameType[] = [];
+            const currentInning = await contractSigner.getInning();
+            const isFinishRoll = await contractSigner.isFinishRoll();
+            this.reduxStore?.dispatch(setIsRolling(isFinishRoll?2:0))
+
+            for (let i = 1; i <= currentInning; i++) {
+                const players = await contractSigner.getPlayers(i);
+                const winner = await contractSigner.getWinner(i);
+                result.push({
+                    inning: i,
+                    total_player: players.length || 0,
+                    winner: (!winner[0]) ? '' : winner[1],
+                })
+            }
+            console.log(result)
+            this.reduxStore?.dispatch(fetchGame(result))
+        }
+    }
+
+    async registerGame(id: string, reward: string) {
+        if (this.contract && this.signer) {
+            const contractSigner = this.contract?.connect(this.signer);
+            const res = await contractSigner.registerGame(id, reward);
             console.log(res)
             alert("Register game success");
         } else {

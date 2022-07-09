@@ -33,10 +33,10 @@ const Player = () => {
 
                 <Tbody>
                     {players.map((player)=>{
-                        return(<Tr key={player.buyerId}>
-                            <Td>{player.buyerId}</Td>
-                            <Td>Wayfarer Classic</Td>
-                            <Td isNumeric>{player.buyerWallet}</Td>
+                        return(<Tr key={player.id}>
+                            <Td>{player.id}</Td>
+                            <Td>{player.reward}</Td>
+                            <Td isNumeric>{player.wallet}</Td>
                         </Tr>)
                     })}
                 </Tbody>

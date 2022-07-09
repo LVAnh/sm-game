@@ -1,7 +1,7 @@
 type PlayerType = {
-    buyerId: string,
-    buyerWallet: string,
-    rewardId?: string,
+    id: string,
+    wallet: string,
+    reward?: string,
 };
 
 export default PlayerType;
