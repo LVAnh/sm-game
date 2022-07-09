@@ -1,4 +1,5 @@
 export const SM_ADDRESS = '0x8117a77273c94f1e82c8314981A9FDA98b6116f8'
+export const OWNER = '0x44e736d8df155b67c4a13f1668b2d29653445eb1'
 export const ABI = [
     {
         "inputs": [

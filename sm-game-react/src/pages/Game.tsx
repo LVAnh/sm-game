@@ -1,4 +1,4 @@
-import React, {ReactNode, useState} from 'react';
+import React, {ReactNode, useEffect, useState} from 'react';
 import {
     IconButton,
     Avatar,
@@ -20,39 +20,53 @@ import {
     MenuButton,
     MenuDivider,
     MenuItem, TableCaption,
-    MenuList, Center, WrapItem, Wrap, TableContainer, Table, Thead, Tbody, Tr, Th, Td, Tfoot, Image
+    MenuList, Center, WrapItem, Wrap, TableContainer, Table, Thead, Tbody, Tr, Th, Td, Tfoot, Image, Button
 } from '@chakra-ui/react';
 import {
     FiHome,
     FiTrendingUp,
-    FiCompass,
-    FiStar,
     FiSettings,
     FiMenu,
-    FiBell,
     FiChevronDown,
 } from 'react-icons/fi';
 import {IconType} from 'react-icons';
 import {ReactText} from 'react';
-import Card from "../components/card";
 import Footer from "../components/Footer";
 import {Token} from "@chakra-ui/styled-system/dist/declarations/src/utils";
 import * as CSS from "csstype";
+import Player from '../components/player';
+import Home from '../components/home';
+import GaneSetting from '../components/setting';
+import SmartContractService from "../services/smart-contract-services";
+import {OWNER} from "../constants";
+import { RootState } from '../reduxs/store';
+import { useSelector } from 'react-redux';
 
 interface LinkItemProps {
     name: string;
     icon: IconType;
 }
 
-const LinkItems: Array<LinkItemProps> = [
-    {name: 'Home', icon: FiHome},
-    {name: 'Player', icon: FiTrendingUp},
-    {name: 'Setting Game', icon: FiSettings},
-];
+
 
 export default function Game() {
     const {isOpen, onOpen, onClose} = useDisclosure();
     const [selected, setSelected] = useState('Home');
+    const [LinkItems, setLinkItems] = useState<Array<LinkItemProps>>([
+        {name: 'Home', icon: FiHome},
+        {name: 'Player', icon: FiTrendingUp},
+    ]);
+    const wallet  = useSelector((state: RootState)=>state.wallet);
+
+    useEffect(()=>{
+        if(wallet.address===OWNER){
+            setLinkItems ([
+                {name: 'Home', icon: FiHome},
+                {name: 'Player', icon: FiTrendingUp},
+                {name: 'Setting Game', icon: FiSettings},
+            ]);
+        }
+    },[])
 
     return (
         <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.900')}>
@@ -61,6 +75,7 @@ export default function Game() {
                 onSelect={(name) => {
                     setSelected(name)
                 }}
+                LinkItems = {LinkItems}
                 display={{base: 'none', md: 'block'}}
             />
             <Drawer
@@ -76,6 +91,7 @@ export default function Game() {
                                     onSelect={(name) => {
                                         setSelected(name)
                                     }}
+                                    LinkItems = {LinkItems}
                     />
                 </DrawerContent>
             </Drawer>
@@ -85,85 +101,24 @@ export default function Game() {
                 <Box flex='1'>
                     {selected === 'Home' && <Home/>}
                     {selected === 'Player' && <Player/>}
-                    {selected === 'Setting Game' && <Home/>}
+                    {selected === 'Setting Game' && <GaneSetting/>}
                 </Box>
                 <Footer/>
             </Box>
         </Box>
     );
 }
-const Player = () => {
-    return (
-        <TableContainer>
-            <Table variant='simple'>
-                <TableCaption>Imperial to metric conversion factors</TableCaption>
-                <Thead>
-                    <Tr>
-                        <Th>To convert</Th>
-                        <Th>into</Th>
-                        <Th isNumeric>multiply by</Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    <Tr>
-                        <Td>inches</Td>
-                        <Td>millimetres (mm)</Td>
-                        <Td isNumeric>25.4</Td>
-                    </Tr>
-                    <Tr>
-                        <Td>feet</Td>
-                        <Td>centimetres (cm)</Td>
-                        <Td isNumeric>30.48</Td>
-                    </Tr>
-                    <Tr>
-                        <Td>yards</Td>
-                        <Td>metres (m)</Td>
-                        <Td isNumeric>0.91444</Td>
-                    </Tr>
-                </Tbody>
-                <Tfoot>
-                    <Tr>
-                        <Th>To convert</Th>
-                        <Th>into</Th>
-                        <Th isNumeric>multiply by</Th>
-                    </Tr>
-                </Tfoot>
-            </Table>
-        </TableContainer>
-    );
-}
 
 
-const Home = () => {
-    return (<Wrap>
-        <WrapItem>
-            <Center>
-                <Card/>
-            </Center>
-        </WrapItem>
-        <WrapItem>
-            <Center>
-                <Card/>
-            </Center>
-        </WrapItem>
-        <WrapItem>
-            <Center>
-                <Card/>
-            </Center>
-        </WrapItem>
-        <WrapItem>
-            <Card/>
-        </WrapItem>
-    </Wrap>)
-}
 
 interface SidebarProps {
+    LinkItems: Array<LinkItemProps>;
     onClose: () => void;
     onSelect: (name: string) => void;
     display?: Token<CSS.Property.Display>;
 }
 
-const SidebarContent = ({onClose, onSelect, display}: SidebarProps) => {
+const SidebarContent = ({LinkItems,onClose, onSelect, display}: SidebarProps) => {
     const [selected, setSelected] = useState('Home');
 
     return (
@@ -175,7 +130,7 @@ const SidebarContent = ({onClose, onSelect, display}: SidebarProps) => {
             w={{base: 'full', md: 60}}
             pos="fixed"
             h="full"
-            display = {display}>
+            display={display}>
             <Flex h="20" alignItems="center" mx="8" justifyContent="space-between">
                 <Image
                     w='200'
@@ -243,6 +198,8 @@ interface MobileProps extends FlexProps {
 }
 
 const MobileNav = ({onOpen, ...rest}: MobileProps) => {
+    const wallet  = useSelector((state: RootState)=>state.wallet);
+
     return (
         <Flex
             ml={{base: 0, md: 60}}
@@ -287,7 +244,7 @@ const MobileNav = ({onOpen, ...rest}: MobileProps) => {
                                     ml="2">
                                     <Text fontSize="sm">Display Name</Text>
                                     <Text fontSize="xs" color="gray.600">
-                                        0xn34js0xn34js0xn34js0xn34js...b1
+                                        {wallet.address}
                                     </Text>
                                 </VStack>
                                 <Box display={{base: 'none', md: 'flex'}}>

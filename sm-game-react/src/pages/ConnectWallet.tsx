@@ -20,7 +20,7 @@ export default function ConnectWallet() {
         const connected = await SmartContractService.instance().connectWallet()
         if(connected){
             console.log("connected")
-            navigate("/game")
+            navigate("/")
         }else {
             console.log("fail")
         }

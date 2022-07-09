@@ -7,6 +7,7 @@ import ConnectWallet from "./pages/ConnectWallet";
 import {ChakraProvider, extendTheme} from "@chakra-ui/react";
 import SmartContractService from "./services/smart-contract-services";
 import Game from "./pages/Game";
+import ProtectedRoute from "./route/ProtectedRoute";
 
 const theme = extendTheme({
     fonts: {
@@ -26,7 +27,9 @@ function App() {
                     <BrowserRouter>
                         <div className="App">
                             <Routes>
-                                <Route path="/game" element={<Game/>}/>
+                                <Route element={<ProtectedRoute />}>
+                                    <Route path="/" element={<Game/>}/>
+                                </Route>
                                 <Route path="/connect" element={<ConnectWallet />}/>
                             </Routes>
                         </div>
